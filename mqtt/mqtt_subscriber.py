@@ -2,24 +2,24 @@
 #
 # Run with: python3 test-subscriber.py <params>
 #
-# NOTES: 
-#    - I had weird issues using ipaddress of local docker containers. Seems to work okay using localhost:port. This seemed to 
+# NOTES:
+#    - I had weird issues using ipaddress of local docker containers. Seems to work okay using localhost:port. This seemed to
 #      impact subscriber only.
 #    - If you subscribe to a particular topic, any messages waiting for the client id on previously subscribed topics will also
 #      be delivered
-# 
+#
 #
 # Examples:
 #   python3 mqtt_subscriber.py --broker localhost --port 1884 --clientid py-sub-01 --qos 1 --cleansession false --topic test/topic
-#   
+#
 # Windows Terminal:
 #   py ./mqtt_subscriber.py --broker localhost --port 1884 --clientid py-sub-01 --qos 1 --cleansession false --topic test/in
-#   
+#
 #
 # For help:
-#   python3 mqtt_subscriber.py -h 
-#     
-#    
+#   python3 mqtt_subscriber.py -h
+#
+#
 #########################################################
 
 import sys
@@ -36,7 +36,7 @@ def str2bool(v):
     elif v.lower() in ('no', 'false', 'f', 'n', '0'):
         return False
     else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')    
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 # parse args
@@ -53,6 +53,7 @@ print(args)
 
 keepalive=1200
 r_messages=[]
+num_msgs_received=0
 
 logging.basicConfig(level=logging.DEBUG)
 #use DEBUG,INFO,WARNING
@@ -61,30 +62,33 @@ def on_disconnect(client, userdata, flags, rc=0):
     print(m)
 
 def on_connect(client, userdata, flags, rc):
-    m="Connected flags"+str(flags)+"result code "+str(rc)+"subscribing_client_id  "+str(client)    
+    m="Connected flags"+str(flags)+"result code "+str(rc)+"subscribing_client_id  "+str(client)
     print(m)
 
 def on_message(subscribing_client, userdata, message):
-    msg=str(message.payload.decode("utf-8"))
+    #msg=str(message.payload.decode("utf-8"))
     #logging.info('Received message "' +msg +'" on topic "' + message.topic + '"')
-    m='Received message "' +msg +'" on topic "' + message.topic + '"'
-    print(m)
-    r_messages.append(msg)
+    #m='Received message "' +msg +'" on topic "' + message.topic + '"'
+    #print(m)
+    #r_messages.append(msg)
+    global num_msgs_received # we want to change the variable inside the funtion
+    num_msgs_received=num_msgs_received+1
+    print("Received message #" + str(num_msgs_received) + " [" + str(len(message.payload.decode('utf-8'))) +" byte(s)]" )
 
 def sub(client,topic,qos,s_msg):
     m=s_msg+" subscribing to topic="+topic +" with qos="+str(qos)
     logging.info(m)
-    #print(m)	
-    client.subscribe(topic,qos)       
+    #print(m)
+    client.subscribe(topic,qos)
 
 print(sys.argv[1] + " " + sys.argv[2] + " " + sys.argv[3] + " " + sys.argv[4] + " " + sys.argv[5] + " " + sys.argv[6])
 
 subscribing_client = mqtt.Client(args.clientid, clean_session=str2bool(args.cleansession))    #create new instance
 
 # attache callback functions
-subscribing_client.on_message=on_message        
-subscribing_client.on_connect=on_connect               
-subscribing_client.on_disconnect=on_disconnect                
+subscribing_client.on_message=on_message
+subscribing_client.on_connect=on_connect
+subscribing_client.on_disconnect=on_disconnect
 
 print("Connecting with CLEAN_SESSION=",args.cleansession)
 subscribing_client.connect(args.broker,int(args.port),keepalive)
@@ -93,7 +97,8 @@ sub(subscribing_client, args.topic, int(args.qos), args.clientid)
 #time.sleep(3)                      # subscribe for x seconds then stop, or...
 inp=input("Waiting to continue:")   # press a key to stop subscribing
 
-print("Received " + str(len(r_messages)) + " message(s)");
+#print("Received " + str(len(r_messages)) + " message(s)");
+print("Received " + str(num_msgs_received) + " message(s)");
 
 subscribing_client.loop_stop(); # stop checking buffer for inbound messages
 subscribing_client.disconnect() # disconnect from broker
