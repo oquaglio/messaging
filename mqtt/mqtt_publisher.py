@@ -2,6 +2,15 @@
 #
 # Examples:
 #
+#   Linux:
+#
+#     python3 mqtt_publisher.py <params>#
+#
+#   Windows Terminal:
+#
+#     py .\mqtt_publisher.py <params>
+#     or use "python"
+#
 #   Parameter examples:
 #
 #    --broker localhost --port 1884 --clientid py-pub-01 --qos 1 --nummsgs 5000 --delay 0 --topic sometopic
@@ -9,19 +18,11 @@
 #
 #    Linux Message:
 #       --message "{\"field\":\"blah\"}"
-	
+#
 #    Windows message:
 #       --message "{\""value\"":\""blah\""}"
 #
-#   Linux:
 #
-#     python3 mqtt_publisher.py <params>
-#
-#
-#   Windows Terminal:
-#
-#     py .\mqtt_publisher.py <params>
-#     or use "python"
 #
 # Help:
 #
@@ -108,9 +109,9 @@ for x in range(1, int(args.nummsgs)+1):
     message="Message "+str(x)
   else:
     message=args.message
-    
+
   time.sleep(float(args.delay)) # siumlate speed of client (3/sec)
-  
+
   pub(publishing_client, args.topic, message, int(args.qos), args.clientid)
   while pub_ack != True:
     #time.sleep(.01) # takes a non-zero amount of time to get the ACK back for QoS > 0 (on_publish called)
