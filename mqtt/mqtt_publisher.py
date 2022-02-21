@@ -14,7 +14,7 @@
 #   Parameter examples:
 #
 #    --broker localhost --port 1884 --clientid py-pub-01 --qos 1 --nummsgs 5000 --delay 0 --topic sometopic
-#
+#    --broker localhost --port 1884 --clientid py-pub-01 --qos 1 --nummsgs 5000 --delay 0 --topic sometopic --message 100
 #
 #    Linux Message:
 #       --message "{\"field\":\"blah\"}"
@@ -36,7 +36,8 @@ import time
 import logging,sys
 import argparse
 import datetime
-
+import random
+import string
 
 #broker="iot.eclipse.org"
 #broker="broker.hivemq.com"
@@ -52,7 +53,7 @@ parser.add_argument('--nummsgs', help='')
 parser.add_argument('--delay', help='Delay between publishing messages in seconds')
 parser.add_argument('--cleansession', help='')
 parser.add_argument('--topic', help='')
-parser.add_argument('--message', help='Custom message to send to topic')
+parser.add_argument('--message', help='Custom message to send to topic or length of random sting to generate')
 args=parser.parse_args()
 
 logging.basicConfig(level=logging.DEBUG)
@@ -84,7 +85,10 @@ def on_publish(client, userdata, mid):
     pass
 
 def pub(client,topic,msg,qos,p_msg):
-    logging.info(datetime.datetime.now().strftime("%d.%b %Y %H:%M:%S") + " " + p_msg + " publishing " + msg + " to topic="+topic +" with qos="+str(qos))
+    if len(msg) <= 30:
+        logging.info(datetime.datetime.now().strftime("%d.%b %Y %H:%M:%S") + " " + p_msg + " publishing " + msg + " to topic="+topic +" with qos="+str(qos))
+    else:
+        logging.info(datetime.datetime.now().strftime("%d.%b %Y %H:%M:%S") + " " + p_msg + " publishing message of size " + str(len(msg)) + " byte(s) to topic="+topic +" with qos="+str(qos))
     ret=client.publish(topic, msg, qos)
     logging.info('Publish result: ' + str(ret))
 
@@ -102,20 +106,21 @@ publishing_client.loop_start()
 
 print("Publishing +" + str(int(args.nummsgs)) + " messages...")
 
-for x in range(1, int(args.nummsgs)+1):
-  pub_ack=False
-
-  if not args.message:
+if not args.message:
     message="Message "+str(x)
-  else:
+elif args.message.isdigit():
+    #message = ''.join(random.sample(string.ascii_letters, int(args.message)))
+    message = ''.join(random.choices(string.ascii_uppercase + string.digits, k = int(args.message)))
+else:
     message=args.message
 
-  time.sleep(float(args.delay)) # siumlate speed of client (3/sec)
-
-  pub(publishing_client, args.topic, message, int(args.qos), args.clientid)
-  while pub_ack != True:
-    #time.sleep(.01) # takes a non-zero amount of time to get the ACK back for QoS > 0 (on_publish called)
-    pass
+for x in range(1, int(args.nummsgs)+1):
+    pub_ack=False
+    time.sleep(float(args.delay)) # siumlate speed of client (3/sec)
+    pub(publishing_client, args.topic, message, int(args.qos), args.clientid)
+    while pub_ack != True:
+        #time.sleep(.01) # takes a non-zero amount of time to get the ACK back for QoS > 0 (on_publish called)
+        pass
 
 publishing_client.disconnect() # disconnect from broker
 publishing_client.loop_stop()
