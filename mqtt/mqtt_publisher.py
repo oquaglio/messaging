@@ -54,6 +54,7 @@ parser.add_argument('--delay', help='Delay between publishing messages in second
 parser.add_argument('--cleansession', help='')
 parser.add_argument('--topic', help='')
 parser.add_argument('--message', help='Custom message to send to topic or length of random sting to generate')
+parser.add_argument('--silent', help='Logging? 1 for true, 0 for false')
 args=parser.parse_args()
 
 logging.basicConfig(level=logging.DEBUG)
@@ -79,18 +80,21 @@ def on_connect(client, userdata, flags, rc):
 # For QoS 0, this simply means that the message has left the client.
 def on_publish(client, userdata, mid):
     m="Broker ack received, result code: " + str(userdata) + "; subscribing_client_id: " + str(mid)
-    print(m)
+    if not int(args.silent):
+      print(m)
     global pub_ack
     pub_ack=True
     pass
 
 def pub(client,topic,msg,qos,p_msg):
-    if len(msg) <= 30:
+    if len(msg) <= 30 and not int(args.silent):
         logging.info(datetime.datetime.now().strftime("%d.%b %Y %H:%M:%S") + " " + p_msg + " publishing " + msg + " to topic="+topic +" with qos="+str(qos))
     else:
+      if not int(args.silent):
         logging.info(datetime.datetime.now().strftime("%d.%b %Y %H:%M:%S") + " " + p_msg + " publishing message of size " + str(len(msg)) + " byte(s) to topic="+topic +" with qos="+str(qos))
     ret=client.publish(topic, msg, qos)
-    logging.info('Publish result: ' + str(ret))
+    if not int(args.silent):
+      logging.info('Publish result: ' + str(ret))
 
 publishing_client = mqtt.Client(args.clientid)    #create new instance
 
