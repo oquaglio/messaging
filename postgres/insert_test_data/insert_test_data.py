@@ -52,9 +52,10 @@ cursor = conn.cursor()
 i = 1
 while i <= int(args.numrecords):
     dt = datetime.datetime.now(pytz.timezone('Australia/Perth'))
+    insert_stmt = "INSERT INTO " + args.table + " (created, updated, initial_value, current_value) VALUES ('%s', '%s', '%d', '%d')" %(dt, dt, 1, 1)
     if not int(args.silent):
-        print("INSERT INTO " + args.table + " (created, updated, initial_value, current_value) VALUES ('%s', '%s', '%d', '%d')" %(dt, dt, i, i))
-    cursor.execute("INSERT INTO " + args.table + " (created, updated, initial_value, current_value) VALUES ('%s', '%s', '%d', '%d')" %(dt, dt, i, i))
+        print(insert_stmt)
+    cursor.execute(insert_stmt)
     #cursor.execute("INSERT INTO " + args.table + " (created, updated, initial_value, current_value) VALUES (%s, %s, %d, %d)", (dt,dt,%1,%1))
     conn.commit()
     i += 1
