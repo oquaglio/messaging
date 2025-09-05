@@ -1,3 +1,35 @@
+###############################################################################
+#
+# Examples:
+#
+#   Linux:
+#
+#     python3 mqtt_publisher.py <params>#
+#
+#   Windows Terminal:
+#
+#     py .\mqtt_publisher.py <params>
+#     or use "python"
+#
+#   Parameter examples:
+#
+#    --broker localhost --port 1884 --clientid py-pub-01 --qos 1 --nummsgs 5000 --delay 0 --topic sometopic
+#    --broker localhost --port 1884 --clientid py-pub-01 --qos 1 --nummsgs 5000 --delay 0 --topic sometopic --message 100
+#
+#    Linux Message:
+#       --message "{\"field\":\"blah\"}"
+#
+#    Windows message:
+#       --message "{\""value\"":\""blah\""}"
+#
+#
+#
+# Help:
+#
+#   python3 mqtt_publisher.py -h
+#
+###############################################################################
+
 import argparse
 import datetime
 import logging
@@ -25,7 +57,7 @@ parser.add_argument(
     "--message",
     help="Custom message to send to topic or length of random string to generate",
 )
-parser.add_argument("--silent", help="Logging? 1 for true, 0 for false")
+parser.add_argument("--silent", help="Logging? 1 for true, 0 for false", default="0")
 args = parser.parse_args()
 
 logging.basicConfig(
