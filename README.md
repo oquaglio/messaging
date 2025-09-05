@@ -9,7 +9,7 @@ Generate 1 kb test msg:
 ./generate_json_kb.sh 1
 
 Generate 100 KB test msg:
-./generate_json_kb.sh 1024
+./generate_json_kb.sh 100
 
 Generate 1 MB test msg:
 ./generate_json_kb.sh 1024

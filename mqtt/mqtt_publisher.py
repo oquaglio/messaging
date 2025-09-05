@@ -36,14 +36,18 @@ import time
 import logging, sys
 import argparse
 import datetime
+import logging
 import random
 import string
+import time
 
-# broker="iot.eclipse.org"
-# broker="broker.hivemq.com"
+import paho.mqtt.client as mqtt
+from paho.mqtt.client import CallbackAPIVersion  # Add this import
+
+# Broker settings
 keepalive = 1200
 
-# parse args
+# Parse args
 parser = argparse.ArgumentParser()
 parser.add_argument("--broker", help="MQTT Broker URL or IP")
 parser.add_argument("--port", help="MQTT Broker Port")
@@ -53,38 +57,50 @@ parser.add_argument("--nummsgs", help="")
 parser.add_argument("--delay", help="Delay between publishing messages in seconds")
 parser.add_argument("--cleansession", help="")
 parser.add_argument("--topic", help="")
-parser.add_argument("--message", help="Custom message to send to topic or length of random sting to generate")
+parser.add_argument(
+    "--message",
+    help="Custom message to send to topic or length of random string to generate",
+)
 parser.add_argument("--silent", help="Logging? 1 for true, 0 for false")
 args = parser.parse_args()
 
-logging.basicConfig(level=logging.DEBUG)
-# use DEBUG,INFO,WARNING
-
-logging.basicConfig(format="%(asctime)s %(levelname)-8s %(message)s", level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S")
+logging.basicConfig(
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 print(args)
 
 
 def on_disconnect(client, userdata, flags, rc=0):
-    m = "DisConnected flags" + "result code: " + str(rc) + ", subscribing_client_id: " + str(client)
+    m = "DisConnected flags" + "result code: " + str(rc) + ", client_id: " + str(client)
     print(m)
 
 
 def on_connect(client, userdata, flags, rc):
-    m = "Connected flags" + str(flags) + "result code: " + str(rc) + ", subscribing_client_id: " + str(client)
+    m = (
+        "Connected flags"
+        + str(flags)
+        + "result code: "
+        + str(rc)
+        + ", client_id: "
+        + str(client)
+    )
     print(m)
 
 
-# Called when a message that was to be sent using the publish() call has completed transmission to the broker.
-# For messages with QoS levels 1 and 2, this means that the appropriate handshakes have completed.
-# For QoS 0, this simply means that the message has left the client.
 def on_publish(client, userdata, mid):
-    m = "Broker ack received, result code: " + str(userdata) + "; subscribing_client_id: " + str(mid)
+    m = (
+        "Broker ack received, result code: "
+        + str(userdata)
+        + "; client_id: "
+        + str(mid)
+    )
     if not int(args.silent):
         print(m)
     global pub_ack
     pub_ack = True
-    pass
 
 
 def pub(client, topic, msg, qos, p_msg):
@@ -118,36 +134,38 @@ def pub(client, topic, msg, qos, p_msg):
         logging.info("Publish result: " + str(ret))
 
 
-publishing_client = mqtt.Client(args.clientid)  # create new instance
+# Create MQTT client with callback API version
+publishing_client = mqtt.Client(
+    client_id=args.clientid, callback_api_version=CallbackAPIVersion.VERSION1
+)
 
-# attache callback functions
+# Attach callback functions
 publishing_client.on_connect = on_connect
 publishing_client.on_publish = on_publish
 publishing_client.on_disconnect = on_disconnect
 
 logging.info("Connecting...")
 publishing_client.connect(args.broker, int(args.port), keepalive)  # connect to broker
-# run a thread in background to handle the network connection and sending/receiving data
 publishing_client.loop_start()
 
-print("Publishing +" + str(int(args.nummsgs)) + " messages...")
+print("Publishing " + str(int(args.nummsgs)) + " messages...")
 
 if not args.message:
     message = "Message " + str(x)
 elif args.message.isdigit():
-    # message = ''.join(random.sample(string.ascii_letters, int(args.message)))
-    message = "".join(random.choices(string.ascii_uppercase + string.digits, k=int(args.message)))
+    message = "".join(
+        random.choices(string.ascii_uppercase + string.digits, k=int(args.message))
+    )
 else:
     message = args.message
 
 for x in range(1, int(args.nummsgs) + 1):
     pub_ack = False
-    time.sleep(float(args.delay))  # siumlate speed of client (3/sec)
+    time.sleep(float(args.delay))  # Simulate speed of client
     pub(publishing_client, args.topic, message, int(args.qos), args.clientid)
     while pub_ack != True:
-        # time.sleep(.01) # takes a non-zero amount of time to get the ACK back for QoS > 0 (on_publish called)
         pass
 
-publishing_client.disconnect()  # disconnect from broker
+publishing_client.disconnect()  # Disconnect from broker
 publishing_client.loop_stop()
 print("Done")
