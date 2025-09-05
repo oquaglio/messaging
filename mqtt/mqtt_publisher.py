@@ -28,6 +28,10 @@
 #
 #   python3 mqtt_publisher.py -h
 #
+# Notes:
+#
+#    Tested OK with Solace (requires and username/password) and Mosquitto
+#
 ###############################################################################
 
 import argparse
@@ -141,6 +145,7 @@ publishing_client.on_publish = on_publish
 publishing_client.on_disconnect = on_disconnect
 
 logging.info("Connecting...")
+# TODO: make username/password optional args
 publishing_client.username_pw_set(username="admin", password="admin")
 publishing_client.connect(args.broker, int(args.port), keepalive)  # connect to broker
 publishing_client.loop_start()
