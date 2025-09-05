@@ -1,39 +1,3 @@
-#########################################################
-#
-# Examples:
-#
-#   Linux:
-#
-#     python3 mqtt_publisher.py <params>#
-#
-#   Windows Terminal:
-#
-#     py .\mqtt_publisher.py <params>
-#     or use "python"
-#
-#   Parameter examples:
-#
-#    --broker localhost --port 1884 --clientid py-pub-01 --qos 1 --nummsgs 5000 --delay 0 --topic sometopic
-#    --broker localhost --port 1884 --clientid py-pub-01 --qos 1 --nummsgs 5000 --delay 0 --topic sometopic --message 100
-#
-#    Linux Message:
-#       --message "{\"field\":\"blah\"}"
-#
-#    Windows message:
-#       --message "{\""value\"":\""blah\""}"
-#
-#
-#
-# Help:
-#
-#   python3 mqtt_publisher.py -h
-#
-#########################################################
-
-import sys
-import paho.mqtt.client as mqtt  # import the subscribing_client
-import time
-import logging, sys
 import argparse
 import datetime
 import logging
@@ -145,6 +109,7 @@ publishing_client.on_publish = on_publish
 publishing_client.on_disconnect = on_disconnect
 
 logging.info("Connecting...")
+publishing_client.username_pw_set(username="admin", password="admin")
 publishing_client.connect(args.broker, int(args.port), keepalive)  # connect to broker
 publishing_client.loop_start()
 
