@@ -58,3 +58,10 @@ For 10KB: python solace_loadtest_publisher_json.py --size 10
 For 100KB: python solace_loadtest_publisher_json.py --size 100
 For 1000KB: python solace_loadtest_publisher_json.py --size 1000
 ```
+
+Specifiy addditional params:
+```SH
+python solace_loadtest_publisher_json.py --size 10 --messages 500 --topic my/test/topic --delay 0.00
+python solace_loadtest_publisher_json.py --size 1000 --messages 1000 --topic solace/loadtest/topic --delay 0.00
+python solace_loadtest_publisher_json.py --size 10 --messages 500 --topic my/test/topic --delay 0.01
+```

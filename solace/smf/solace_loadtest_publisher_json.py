@@ -14,12 +14,10 @@ VPN_NAME = os.environ.get("SOLACE_VPN", "default")
 USERNAME = os.environ.get("SOLACE_USERNAME", "default")
 PASSWORD = os.environ.get("SOLACE_PASSWORD", "default")
 
-# Load test config
-TOPIC = "solace/loadtest/topic"  # Change to your queue-bound topic if needed
-VOLUME = 1000  # Number of messages to publish
-DELAY_BETWEEN_MSGS = (
-    0.001  # Seconds between messages (0 for max speed; adjust to avoid backpressure)
-)
+# Default load test config
+DEFAULT_TOPIC = "solace/loadtest/topic"
+DEFAULT_VOLUME = 1000
+DEFAULT_DELAY = 0.001
 MESSAGE_PROPERTIES = {"app_id": "loadtest"}  # Optional custom SMF properties
 
 
@@ -70,10 +68,13 @@ def generate_random_json(target_size_kb: int) -> str:
     return json_str
 
 
-def main(payload_size_kb: int):
-    # Step 1: Log host and VPN name
+def main(payload_size_kb: int, num_messages: int, topic_name: str, delay: float):
+    # Step 1: Log host, VPN name, and parameters
     print(f"Using Solace host: {BROKER_HOST}")
     print(f"Using VPN name: {VPN_NAME}")
+    print(
+        f"Publishing {num_messages} messages to topic '{topic_name}' with {delay} sec delay"
+    )
 
     # Step 2: Configure connection properties as a dictionary
     properties = {
@@ -82,6 +83,7 @@ def main(payload_size_kb: int):
         "solace.messaging.authentication.scheme.basic.username": USERNAME,
         "solace.messaging.authentication.scheme.basic.password": PASSWORD,
     }
+    print(f"Connection properties: {properties}")
 
     # Step 3: Build and connect the messaging service
     messaging_service = MessagingService.builder().from_properties(properties).build()
@@ -89,7 +91,15 @@ def main(payload_size_kb: int):
         messaging_service.connect()
         print(f"Connected to Solace broker at {BROKER_HOST}")
     except Exception as e:
-        print(f"Connection failed: {e}")
+        print(f"Connection failed: {str(e)}")
+        print(f"Error details: {type(e).__name__}")
+        print("Suggestions:")
+        print("- Verify Solace broker is running: 'docker compose ps'")
+        print(
+            f"- Check if {BROKER_HOST} is reachable: 'telnet {BROKER_HOST.split('://')[1]}'"
+        )
+        print("- Ensure port 55555 is exposed in docker-compose.yml")
+        print("- Try BROKER_HOST=tcp://localhost:55555 or the container's IP")
         return
 
     # Step 4: Create and start the direct message publisher
@@ -105,9 +115,9 @@ def main(payload_size_kb: int):
     message_builder = messaging_service.message_builder()
 
     # Step 6: Publish volume messages with random JSON
-    topic_obj = Topic.of(TOPIC)
+    topic_obj = Topic.of(topic_name)
     start_time = time.time()
-    for i in range(VOLUME):
+    for i in range(num_messages):
         # Generate random JSON payload
         json_payload = generate_random_json(payload_size_kb)
 
@@ -123,13 +133,14 @@ def main(payload_size_kb: int):
         publisher.publish(outbound_message, topic_obj)
 
         # Optional delay to control rate
-        time.sleep(DELAY_BETWEEN_MSGS)
+        if delay > 0:
+            time.sleep(delay)
 
     end_time = time.time()
     print(
-        f"Published {VOLUME} messages of ~{payload_size_kb} KB to topic '{TOPIC}' "
+        f"Published {num_messages} messages of ~{payload_size_kb} KB to topic '{topic_name}' "
         f"in {end_time - start_time:.2f} seconds "
-        f"({VOLUME / (end_time - start_time):.2f} msgs/sec)"
+        f"({num_messages / (end_time - start_time):.2f} msgs/sec)"
     )
 
     # Step 7: Clean up
@@ -146,5 +157,23 @@ if __name__ == "__main__":
         default=1,
         help="Payload size in KB (e.g., 1, 10, 100, 1000)",
     )
+    parser.add_argument(
+        "--messages",
+        type=int,
+        default=DEFAULT_VOLUME,
+        help="Number of messages to publish (default: 1000)",
+    )
+    parser.add_argument(
+        "--topic",
+        type=str,
+        default=DEFAULT_TOPIC,
+        help="Topic name to publish to (default: solace/loadtest/topic)",
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=DEFAULT_DELAY,
+        help="Delay between messages in seconds (default: 0.001)",
+    )
     args = parser.parse_args()
-    main(args.size)
+    main(args.size, args.messages, args.topic, args.delay)
