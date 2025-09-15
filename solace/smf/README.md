@@ -12,8 +12,7 @@ export SOLACE_PASSWORD=your-password
 
 E.g.:
 ```SH
-export SOLACE_HOST=tcp://solace-broker-single-node:55555
-export SOLACE_HOST=tcp://solace-broker:55555
+export SOLACE_HOST=tcp://localhost:55555
 export SOLACE_VPN=default
 export SOLACE_USERNAME=admin
 export SOLACE_PASSWORD=admin
