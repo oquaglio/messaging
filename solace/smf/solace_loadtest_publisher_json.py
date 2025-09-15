@@ -8,11 +8,11 @@ import time
 from solace.messaging.messaging_service import MessagingService
 from solace.messaging.resources.topic import Topic
 
-# Configuration - Set these via env vars or edit directly
-BROKER_HOST = os.environ.get("SOLACE_HOST", "tcp://localhost:55555")
-VPN_NAME = os.environ.get("SOLACE_VPN", "default")
-USERNAME = os.environ.get("SOLACE_USERNAME", "default")
-PASSWORD = os.environ.get("SOLACE_PASSWORD", "default")
+# Default configuration
+DEFAULT_BROKER = "tcp://localhost:55555"
+DEFAULT_VPN = "default"
+DEFAULT_USERNAME = "default"
+DEFAULT_PASSWORD = "default"
 
 # Default load test config
 DEFAULT_TOPIC = "solace/loadtest/topic"
@@ -68,20 +68,30 @@ def generate_random_json(target_size_kb: int) -> str:
     return json_str
 
 
-def main(payload_size_kb: int, num_messages: int, topic_name: str, delay: float):
-    # Step 1: Log host, VPN name, and parameters
-    print(f"Using Solace host: {BROKER_HOST}")
-    print(f"Using VPN name: {VPN_NAME}")
+def main(
+    payload_size_kb: int,
+    num_messages: int,
+    topic_name: str,
+    delay: float,
+    broker: str,
+    vpn: str,
+    username: str,
+    password: str,
+):
+    # Step 1: Log connection parameters
+    print(f"Using Solace host: {broker}")
+    print(f"Using VPN name: {vpn}")
+    print(f"Using username: {username}")
     print(
         f"Publishing {num_messages} messages to topic '{topic_name}' with {delay} sec delay"
     )
 
     # Step 2: Configure connection properties as a dictionary
     properties = {
-        "solace.messaging.transport.host": BROKER_HOST,
-        "solace.messaging.service.vpn-name": VPN_NAME,
-        "solace.messaging.authentication.scheme.basic.username": USERNAME,
-        "solace.messaging.authentication.scheme.basic.password": PASSWORD,
+        "solace.messaging.transport.host": broker,
+        "solace.messaging.service.vpn-name": vpn,
+        "solace.messaging.authentication.scheme.basic.username": username,
+        "solace.messaging.authentication.scheme.basic.password": password,
     }
     print(f"Connection properties: {properties}")
 
@@ -89,17 +99,15 @@ def main(payload_size_kb: int, num_messages: int, topic_name: str, delay: float)
     messaging_service = MessagingService.builder().from_properties(properties).build()
     try:
         messaging_service.connect()
-        print(f"Connected to Solace broker at {BROKER_HOST}")
+        print(f"Connected to Solace broker at {broker}")
     except Exception as e:
         print(f"Connection failed: {str(e)}")
         print(f"Error details: {type(e).__name__}")
         print("Suggestions:")
-        print("- Verify Solace broker is running: 'docker compose ps'")
-        print(
-            f"- Check if {BROKER_HOST} is reachable: 'telnet {BROKER_HOST.split('://')[1]}'"
-        )
-        print("- Ensure port 55555 is exposed in docker-compose.yml")
-        print("- Try BROKER_HOST=tcp://localhost:55555 or the container's IP")
+        print("- Verify Solace broker is running and accessible")
+        print(f"- Check if {broker} is reachable: 'telnet {broker.split('://')[1]}'")
+        print("- Ensure port 55555 (or 55443 for TLS) is open")
+        print("- Verify broker, VPN, username, and password are correct")
         return
 
     # Step 4: Create and start the direct message publisher
@@ -129,8 +137,11 @@ def main(payload_size_kb: int, num_messages: int, topic_name: str, delay: float)
             .build(json_payload)
         )
 
-        # Publish to topic (or queue-bound topic)
+        # Publish to topic and log
         publisher.publish(outbound_message, topic_obj)
+        print(
+            f"Published message {i + 1}/{num_messages} (ID: loadtest-json-{i}, ~{payload_size_kb} KB)"
+        )
 
         # Optional delay to control rate
         if delay > 0:
@@ -175,5 +186,38 @@ if __name__ == "__main__":
         default=DEFAULT_DELAY,
         help="Delay between messages in seconds (default: 0.001)",
     )
+    parser.add_argument(
+        "--broker",
+        type=str,
+        default=os.environ.get("SOLACE_HOST", DEFAULT_BROKER),
+        help="Broker host and port (e.g., tcp://<host>:55555)",
+    )
+    parser.add_argument(
+        "--vpn",
+        type=str,
+        default=os.environ.get("SOLACE_VPN", DEFAULT_VPN),
+        help="Message VPN name (default: default)",
+    )
+    parser.add_argument(
+        "--username",
+        type=str,
+        default=os.environ.get("SOLACE_USERNAME", DEFAULT_USERNAME),
+        help="Broker username (default: default)",
+    )
+    parser.add_argument(
+        "--password",
+        type=str,
+        default=os.environ.get("SOLACE_PASSWORD", DEFAULT_PASSWORD),
+        help="Broker password (default: default)",
+    )
     args = parser.parse_args()
-    main(args.size, args.messages, args.topic, args.delay)
+    main(
+        args.size,
+        args.messages,
+        args.topic,
+        args.delay,
+        args.broker,
+        args.vpn,
+        args.username,
+        args.password,
+    )
