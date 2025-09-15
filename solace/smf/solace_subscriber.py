@@ -20,8 +20,11 @@ class SimpleMessageHandler(MessageHandler):
     def on_message(self, message: InboundMessage):
         message_id = message.get_application_message_id() or "N/A"
         payload = message.get_payload_as_string() or "N/A"
+        payload_size = len(payload.encode("utf-8")) / 1024  # Size in KB
+        # Show first 100 chars of payload (or full if smaller)
+        payload_snippet = payload[:100] + ("..." if len(payload) > 100 else "")
         print(
-            f"Received message (ID: {message_id}, Payload size: {len(payload.encode('utf-8')) / 1024:.2f} KB)"
+            f"Received message (ID: {message_id}, Payload size: {payload_size:.2f} KB, Payload: {payload_snippet})"
         )
 
 
@@ -43,22 +46,14 @@ def main(broker: str, vpn: str, username: str, password: str, topic: str, queue:
 
     # Build and connect messaging service
     messaging_service = MessagingService.builder().from_properties(properties).build()
+    receiver = None
     try:
         messaging_service.connect()
         print(f"Connected to Solace broker at {broker}")
-    except Exception as e:
-        print(f"Connection failed: {str(e)}")
-        print("Suggestions:")
-        print("- Verify Solace broker is running and accessible")
-        print(f"- Check if {broker} is reachable: 'telnet {broker.split('://')[1]}'")
-        print("- Ensure port 55555 (or 55443 for TLS) is open")
-        print("- Verify broker, VPN, username, and password are correct")
-        return
 
-    try:
         # Create receiver
         if queue:
-            # Consume from queue
+            # Consume from queue (durable exclusive queue)
             receiver = (
                 messaging_service.create_persistent_message_receiver_builder().build(
                     Queue.durable_exclusive_queue(queue)
@@ -68,7 +63,7 @@ def main(broker: str, vpn: str, username: str, password: str, topic: str, queue:
             # Subscribe to topic
             receiver = (
                 messaging_service.create_direct_message_receiver_builder()
-                .with_subscriptions(TopicSubscription.of(topic))
+                .with_subscriptions([TopicSubscription.of(topic)])
                 .build()
             )
 
@@ -83,9 +78,18 @@ def main(broker: str, vpn: str, username: str, password: str, topic: str, queue:
             time.sleep(3600)  # Run for 1 hour or until interrupted
         except KeyboardInterrupt:
             print("Stopping receiver...")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        print(f"Error details: {type(e).__name__}")
+        print("Suggestions:")
+        print("- Verify Solace broker is running and accessible")
+        print(f"- Check if {broker} is reachable: 'telnet {broker.split('://')[1]}'")
+        print("- Ensure port 55555 (or 55443 for TLS) is open")
+        print("- Verify broker, VPN, username, password, and topic/queue are correct")
     finally:
         # Clean up
-        receiver.terminate()
+        if receiver:
+            receiver.terminate()
         messaging_service.disconnect()
         print("Disconnected")
 
@@ -96,7 +100,7 @@ if __name__ == "__main__":
         "--broker",
         type=str,
         default=os.environ.get("SOLACE_HOST", DEFAULT_BROKER),
-        help="Broker host and port (e.g., tcp://<host>:55555)",
+        help="Broker host and port (e.g., tcp://<host>:55555 or tcps://<host>:55443 for TLS)",
     )
     parser.add_argument(
         "--vpn",
