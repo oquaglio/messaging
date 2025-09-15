@@ -47,6 +47,11 @@ pyenv deactivate; yes | pyenv virtualenv-delete $pyenv_env_name
 
 ## Run
 
+Run subscriber first (as requried):
+```SH
+python solace_loadtest_subscriber.py  --topic <your-topic>
+```
+
 ```SH
 python solace_loadtest_publisher.py.
 ```
