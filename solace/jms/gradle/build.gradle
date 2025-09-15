@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.solacesystems:sol-jms:10.15.0'
+}
+
+application {
+    mainClass = 'SolaceJmsPublisher'
+}
