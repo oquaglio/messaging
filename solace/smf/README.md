@@ -47,6 +47,8 @@ pyenv deactivate; yes | pyenv virtualenv-delete $pyenv_env_name
 
 ## Run
 
+NOTE: publisher might not report errors on publishing to topics the ACL for the user doesn't allow.
+
 Run subscriber first (as requried):
 ```SH
 python solace_loadtest_subscriber.py  --topic <your-topic>
