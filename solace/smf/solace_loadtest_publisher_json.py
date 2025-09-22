@@ -63,8 +63,6 @@ def generate_random_json(target_size_kb: int) -> str:
         base_data["data"] = base_data["data"][:-excess_items]
         json_str = json.dumps(base_data)
 
-    final_size = len(json_str.encode("utf-8")) / 1024  # Size in KB
-    print(f"Generated JSON payload of ~{final_size:.2f} KB")
     return json_str
 
 
@@ -105,7 +103,9 @@ def main(
         print(f"Error details: {type(e).__name__}")
         print("Suggestions:")
         print("- Verify Solace broker is running and accessible")
-        print(f"- Check if {broker} is reachable: 'telnet {broker.split('://')[1]}'")
+        print(
+            f"- Check if {broker.split('://')[1]} is reachable: 'telnet {broker.split('://')[1]}'"
+        )
         print("- Ensure port 55555 (or 55443 for TLS) is open")
         print("- Verify broker, VPN, username, and password are correct")
         return
@@ -122,13 +122,15 @@ def main(
     # Step 5: Prepare reusable message builder
     message_builder = messaging_service.message_builder()
 
-    # Step 6: Publish volume messages with random JSON
+    # Step 6: Generate JSON payload once and log its size
+    json_payload = generate_random_json(payload_size_kb)
+    final_size = len(json_payload.encode("utf-8")) / 1024  # Size in KB
+    print(f"Generated JSON payload of ~{final_size:.2f} KB")
+
+    # Step 7: Publish volume messages with the same JSON payload
     topic_obj = Topic.of(topic_name)
     start_time = time.time()
     for i in range(num_messages):
-        # Generate random JSON payload
-        json_payload = generate_random_json(payload_size_kb)
-
         # Build outbound message with JSON content type
         outbound_message = (
             message_builder.with_application_message_id(f"loadtest-json-{i}")
@@ -154,7 +156,7 @@ def main(
         f"({num_messages / (end_time - start_time):.2f} msgs/sec)"
     )
 
-    # Step 7: Clean up
+    # Step 8: Clean up
     publisher.terminate()
     messaging_service.disconnect()
     print("Disconnected")
